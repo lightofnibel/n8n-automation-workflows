@@ -1,0 +1,91 @@
+{
+  "name": "Help Desk Automated Ticket Classification & AI Routing",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "v1/tickets/incoming",
+        "options": {}
+      },
+      "id": "e3b4a2c1-1234-4567-89ab-cdef12345678",
+      "name": "Webhook Receiver",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [100, 300]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o",
+        "promptType": "create",
+        "text": "Identify user intent, technical urgency (Low, Medium, High), and core technical category (Database, Authentication, Infrastructure, Software Bug) from this support ticket: {{ $json.body.message }}. Return a strict, flat JSON format with keys: 'category', 'urgency', and 'summary'."
+      },
+      "id": "a1b2c3d4-5678-9012-3456-7890abcdef12",
+      "name": "OpenAI Intent Classifier",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [320, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.urgency }}",
+              "value2": "High"
+            }
+          ]
+        }
+      },
+      "id": "b2c3d4e5-6789-0123-4567-890abcdef123",
+      "name": "Urgency Filter (IF)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [540, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Secure structural cleanup and timestamp assignment for production databases\nfor (let item of $input.all()) {\n  item.json.processed_at = new Date().toISOString();\n  item.json.sanitized_summary = item.json.summary.trim().replace(/[<>]/g, '');\n}\nreturn $input.all();"
+      },
+      "id": "c3d4e5f6-7890-1234-5678-90abcdef1234",
+      "name": "JavaScript Data Transformer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [760, 200]
+    }
+  ],
+  "connections": {
+    "Webhook Receiver": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Intent Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Intent Classifier": {
+      "main": [
+        [
+          {
+            "node": "Urgency Filter (IF)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Urgency Filter (IF)": {
+      "main": [
+        [
+          {
+            "node": "JavaScript Data Transformer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
